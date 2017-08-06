@@ -7,6 +7,7 @@
 package main
 
 import (
+	"strconv"
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
@@ -30,6 +31,7 @@ func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
 
 	// We store the key and the value on the ledger
 	err := stub.PutState(args[0], []byte(args[1]))
+	err = stub.PutState("SNUM", []byte(strconv.Itoa(0)))
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Failed to create asset: %s", args[0]))
 	}
@@ -49,6 +51,10 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 		result, err = set(stub, args)
 	} else if fn == "pray" {
 		result, err = pray(stub, args)
+	} else if fn == "minmin" {
+		result, err = minmin(stub, args)
+	} else if fn == "addadd" {
+		result, err = addadd(stub, args)
 	} else {// assume 'get' even if fn is nil
 		result, err = get(stub, args)
 	}
@@ -68,6 +74,51 @@ func pray(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	return "true", nil
 }
 
+func addadd(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	if len(args) != 0 {
+		return "", fmt.Errorf("No args")
+	}
+	s, err := stub.GetState("SNUM")
+	value, err := strconv.Atoi(string(s))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get SNUM with error: %s", err)
+	}
+//	if value == nil {
+//		return "", fmt.Errorf("SNUM NF")
+//	}
+	if value >= 10 {
+		return "", fmt.Errorf("SNUM is at ceiling")
+	}
+	str := strconv.Itoa(value + 1)
+	err = stub.PutState("SNUM", []byte(str))
+	if err != nil {
+		return "", fmt.Errorf("Failed to perform addadd")
+	}
+	return str, nil
+}
+
+func minmin(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	if len(args) != 0 {
+		return "", fmt.Errorf("No args")
+	}
+	s, err := stub.GetState("SNUM")
+	value, err := strconv.Atoi(string(s))
+	if err != nil {
+		return "", fmt.Errorf("Failed to get SNUM with error: %s", err)
+	}
+//	if value == nil {
+//		return "", fmt.Errorf("SNUM NF")
+//	}
+	if value <= 0 {
+		return "", fmt.Errorf("SNUM is at bottom")
+	}
+	str := strconv.Itoa(value - 1)
+	err = stub.PutState("SNUM", []byte(str))
+	if err != nil {
+		return "", fmt.Errorf("Failed to perform minmin")
+	}
+	return str, nil
+}
 // Set stores the asset (both key and value) on the ledger. If the key exists,
 // it will override the value with the new one
 func set(stub shim.ChaincodeStubInterface, args []string) (string, error) {
