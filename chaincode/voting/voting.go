@@ -34,6 +34,9 @@ func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	err := stub.PutState(args[0], []byte(args[1]))
 	err = stub.PutState("SNUM", []byte(strconv.Itoa(0)))
 	err = stub.PutState("UNUM", []byte(strconv.Itoa(0)))
+	err = stub.PutState("CANDIDATE_1", []byte(strconv.Itoa(0)))
+	err = stub.PutState("CANDIDATE_2", []byte(strconv.Itoa(0)))
+	err = stub.PutState("CANDIDATE_3", []byte(strconv.Itoa(0)))
 	if err != nil {
 		return shim.Error(fmt.Sprintf("Failed to create asset: %s", args[0]))
 	}
@@ -59,10 +62,10 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 		result, err = addadd(stub, args)
 	} else if fn == "adduser" {
 		result, err = adduser(stub, args)
-//	} else if fn == "votefor" {
-//		result, err = votefor(stub, args)
-//	} else if fn == "victory" {
-//		result, err = victory(stub, args)
+	} else if fn == "votefor" {
+		result, err = votefor(stub, args)
+	} else if fn == "seepoll" {
+		result, err = seepoll(stub, args)
 	} else {// assume 'get' even if fn is nil
 		result, err = get(stub, args)
 	}
@@ -72,6 +75,59 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
 	// Return the result as success payload
 	return shim.Success([]byte(result))
+}
+
+func seepoll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	value1, err := stub.GetState("CANDIDATE_1")
+	value2, err := stub.GetState("CANDIDATE_2")
+	value3, err := stub.GetState("CANDIDATE_3")
+	return string(value1) + string(value2) + string(value3), err
+}
+
+func votefor(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	if len(args) != 3 { //uname, passwd, candid
+		return "", fmt.Errorf("NOTEFOR FORMAT ERROR")
+	}
+	s, err := stub.GetState("UNUM")
+	unum, err := strconv.Atoi(string(s))
+	if err != nil {
+		return "", fmt.Errorf("failed to get UNUM with error: %s", err)
+	}
+	i := 0
+	for i < unum {
+		s, _ = stub.GetState("UID" + strconv.Itoa(i))
+		p, _ := stub.GetState("PID" + strconv.Itoa(i))
+		t, _ := stub.GetState("SID" + strconv.Itoa(i))
+		if strings.Compare(string(s), args[0]) == 0 {
+			if strings.Compare(string(p), args[1]) != 0 {
+				return "", fmt.Errorf("PASSWD WRONG")
+			}
+			if strings.Compare(string(t), "false") != 0 {
+				return "", fmt.Errorf("ACCOUNT USED")
+			}
+			flag := 0
+			if strings.Compare(string(args[2]), "CANDIDATE_1") == 0 {
+				flag = 1
+			}
+			if strings.Compare(string(args[2]), "CANDIDATE_2") == 0 {
+				flag = 1
+			}
+			if strings.Compare(string(args[2]), "CANDIDATE_3") == 0 {
+				flag = 1
+			}
+			if flag == 0 {
+				return "", fmt.Errorf("CANDIDATE NF")
+			}
+			s, err := stub.GetState(args[2])
+			value, err := strconv.Atoi(string(s))
+			str := strconv.Itoa(value + 1)
+			err = stub.PutState(args[2], []byte(str))
+			err = stub.PutState("SID" + strconv.Itoa(i), []byte("true"))
+			return "VOTED FOR" + args[2], err
+		}
+		i++
+	}
+	return "", fmt.Errorf("USER NF")
 }
 
 func adduser(stub shim.ChaincodeStubInterface, args []string) (string, error) {
@@ -92,10 +148,12 @@ func adduser(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 		i++
 	}
 	err = stub.PutState("UID" + strconv.Itoa(unum), []byte(args[0]))
+	err = stub.PutState("PID" + strconv.Itoa(unum), []byte(args[1]))
+	err = stub.PutState("SID" + strconv.Itoa(unum), []byte("false"))
 	unum++
 	str := strconv.Itoa(unum)
 	err = stub.PutState("UNUM", []byte(str))
-	return "ADD USER" + args[0], nil
+	return "ADD USER " + args[0], nil
 }
 
 //##################################################
