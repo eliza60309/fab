@@ -52,7 +52,9 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
 	var result string
 	var err error
-	if fn == "set" {
+	if fn == "verify" {
+		result, err = verify(stub, args)
+	} else if fn == "set" {
 		result, err = set(stub, args)
 	} else if fn == "pray" {
 		result, err = pray(stub, args)
@@ -78,10 +80,53 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 }
 
 func seepoll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
-	value1, err := stub.GetState("CANDIDATE_1")
-	value2, err := stub.GetState("CANDIDATE_2")
-	value3, err := stub.GetState("CANDIDATE_3")
-	return string(value1) + string(value2) + string(value3), err
+	if len(args) != 1 { //uname, passwd
+		return "", fmt.Errorf("SEEPOLL FORMAT ERROR")
+	}
+	flag := 0
+	if strings.Compare(string(args[0]), "CANDIDATE_1") == 0 {
+		flag = 1
+	}
+	if strings.Compare(string(args[0]), "CANDIDATE_2") == 0 {
+		flag = 1
+	}
+	if strings.Compare(string(args[0]), "CANDIDATE_3") == 0 {
+		flag = 1
+	}
+	if flag == 0 {
+		return "", fmt.Errorf("CANDIDATE NF")
+	}
+	value, err := stub.GetState(args[0])
+	return string(value), err
+}
+
+func verify(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	if len(args) != 2 { //uname, passwd
+		return "", fmt.Errorf("VERIFY FORMAT ERROR")
+	}
+	s, err := stub.GetState("UNUM")
+	unum, err := strconv.Atoi(string(s))
+	if err != nil {
+		return "", fmt.Errorf("failed to get UNUM with error: %s", err)
+	}
+	i := 0
+	for i < unum {
+		s, _ = stub.GetState("UID" + strconv.Itoa(i))
+		p, _ := stub.GetState("PID" + strconv.Itoa(i))
+		t, _ := stub.GetState("SID" + strconv.Itoa(i))
+		if strings.Compare(string(s), args[0]) == 0 {
+			if strings.Compare(string(p), args[1]) != 0 {
+				return "PASSWD WRONG", err
+			}
+			if strings.Compare(string(t), "true") == 0 {
+				return "VOTE USED" , err
+			} else {
+				return "VOTE NOT USED", err
+			}
+		}
+		i++
+	}
+	return "NO SUCH USER", err
 }
 
 func votefor(stub shim.ChaincodeStubInterface, args []string) (string, error) {
@@ -123,7 +168,7 @@ func votefor(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 			str := strconv.Itoa(value + 1)
 			err = stub.PutState(args[2], []byte(str))
 			err = stub.PutState("SID" + strconv.Itoa(i), []byte("true"))
-			return "VOTED FOR" + args[2], err
+			return "VOTED FOR " + args[2], err
 		}
 		i++
 	}
