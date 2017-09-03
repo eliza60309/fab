@@ -118,24 +118,69 @@ chaincode()
 {
 	chaincode_build()
 	{
-		codename="voting"
-		docker exec -d chaincode bash -c "cd $codename; go build 2> /dev/null;"
+		codename=""
+		while [ "$codename" == "" ]; do
+			dialog --title "Codename" --inputbox "Please input codename" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			codename=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
+		docker exec -d chaincode bash -c "cd $codename; go build $codename.go;"
 		dialog --title "Chaincode building" --infobox "Chaincode is building" 200 100
 		sleep 2
 	}
 	chaincode_run()
 	{
-		codename="voting"
+		codename=""
+		while [ "$codename" == "" ]; do
+			dialog --title "Codename" --inputbox "Please input codename" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			codename=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
 		ping=$(docker exec chaincode ps aux | grep $codename)
 		if [ "$ping" != ""  ]; then
 			dialog --title "Chaincode is running" --infobox "Chaincode is already running, aborting..." 200 100
 			sleep 2
 		fi
-		docker exec -d chaincode bash -c "cd $codename;CORE_PEER_ADDRESS=peer:7051 CORE_CHAINCODE_ID_NAME=mycc:0 ./$codename 2> /dev/null"
+		name=""
+		while [ "$name" == "" ]; do
+			dialog --title "Codename" --inputbox "Please name your code" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			name=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
+		docker exec -d chaincode bash -c "cd $codename;CORE_PEER_ADDRESS=peer:7051 CORE_CHAINCODE_ID_NAME=$name:0 ./$codename 2> /dev/null"
 	}
 	chaincode_kill()
 	{
-		codename="voting"
+		codename=""
+		while [ "$codename" == "" ]; do
+			dialog --title "Codename" --inputbox "Please input codename" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			codename=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
 		ping=$(docker exec chaincode ps aux | grep $codename)
 		if [ "$ping" == ""  ]; then
 			dialog --title "Chaincode is not running" --infobox "Chaincode is not running, aborting..." 200 100
@@ -146,12 +191,49 @@ chaincode()
 	}
 	chaincode_install()
 	{
-		codename="voting"
-		docker exec -d cli bash -c "peer chaincode install -p chaincodedev/chaincode/$codename -n mycc -v 0"
+		codename=""
+		while [ "$codename" == "" ]; do
+			dialog --title "Codename" --inputbox "Please input codename" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			codename=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
+		name=""
+		while [ "$name" == "" ]; do
+			dialog --title "Codename" --inputbox "Please name your code" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			name=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
+#		docker exec -d cli bash -c "peer chaincode install -p chaincodedev/chaincode/$codename -n mycc -v 0"
+		docker exec -d cli bash -c "peer chaincode install -p chaincodedev/chaincode/$codename -n $name -v 0"
 	}
 	chaincode_instantiate()
 	{
-		docker exec -d cli bash -c "peer chaincode instantiate -n mycc -v 0 -c '{\"Args\":[\"a\",\"10\"]}' -C myc"
+		name=""
+		while [ "$name" == "" ]; do
+			dialog --title "Codename" --inputbox "Please name your code" 200 100 2> /tmp/chaincode
+			result=$?
+			if [ $result -eq 1 ]; then
+				main
+			elif [ $result -eq 255 ]; then
+				exit 255
+			fi
+			name=$(cat /tmp/chaincode)
+			rm /tmp/chaincode
+		done
+#		docker exec -d cli bash -c "peer chaincode instantiate -n mycc -v 0 -c '{\"Args\":[\"a\",\"10\"]}' -C myc"
+		docker exec -d cli bash -c "peer chaincode instantiate -n $name -v 0 -c '{\"Args\":[\"a\",\"10\"]}' -C myc"
 	}
 	chaincode_invoke()
 	{
